@@ -8,6 +8,7 @@ file(GLOB_RECURSE sources "${CMAKE_CURRENT_SOURCE_DIR}/demos/*.c")
 # User
 # sdk_add_compile_definitions(-DCONFIG_CLI_CMD_ENABLE)
 # sdk_add_compile_definitions(-DCONFIG_EASYFLASH4)
+include(wifi-password.conf)
 
 # sdk_add_compile_definitions(-DBL616_DHCP_DEBUG)
 target_sources(app PRIVATE

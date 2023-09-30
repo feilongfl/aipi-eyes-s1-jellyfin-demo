@@ -291,13 +291,14 @@ static void queue_task(void* arg)
     lv_ui* ui = (lv_ui*)arg;
     ssid = flash_get_data(SSID_KEY, 32);
     password = flash_get_data(PASS_KEY, 32);
-    if (ssid!=NULL)
+    if (ssid!=NULL && strlen(ssid)>0)
     {
         printf("read flash ssid:%s password:%s\r\n", ssid, password);
         wifi_connect(ssid, password);
     }
     else {
-        printf("ssid read value is NULL:%06X\r\n", SSID_KEY);
+        printf("use wifi setting in firmware, ssid:%s\r\n", FEILONG_WIFI_SSID);
+        wifi_connect(FEILONG_WIFI_SSID, FEILONG_WIFI_PASS);
     }
 
     while (1)

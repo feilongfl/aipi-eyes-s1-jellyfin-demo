@@ -110,7 +110,7 @@
 #define LWIP_RAW                  1
 #define LWIP_MULTICAST_TX_OPTIONS 1
 
-#define LWIP_TIMEVAL_PRIVATE      0 // use sys/time.h for struct timeval
+#define LWIP_TIMEVAL_PRIVATE      1 // use sys/time.h for struct timeval
 
  //#define LWIP_PROVIDE_ERRNO
 
@@ -138,6 +138,7 @@ extern int* __errno(void);
 #define LWIP_RAND()                                      ((u32_t)random())
 #define LWIP_DECLARE_MEMORY_ALIGNED(variable_name, size) u8_t variable_name[size] __attribute__((aligned(4))) __attribute__((section("SHAREDRAM")))
 
+#define MEMP_NUM_SYS_TIMEOUT 20
 
 #define SNTP_SERVER_DNS 1
 #define SNTP_SET_SYSTEM_TIME //sntp_set_time

@@ -10,15 +10,7 @@ file(GLOB_RECURSE sources "${CMAKE_CURRENT_SOURCE_DIR}/demos/*.c")
 # sdk_add_compile_definitions(-DCONFIG_CLI_CMD_ENABLE)
 # sdk_add_compile_definitions(-DCONFIG_EASYFLASH4)
 include(wifi-password.conf)
-
-set(FEILONG_JELLYFIN_SERVER_USE_DNS false)
-if(FEILONG_JELLYFIN_SERVER_USE_DNS)
-sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_USE_DNS)
-sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_ADDR="feilong-fipi.lan")
-else()
-sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_ADDR="192.168.10.110")
-endif()
-sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_PORT="8096")
+include(jellyfin.cmake)
 
 # sdk_add_compile_definitions(-DBL616_DHCP_DEBUG)
 target_sources(app PRIVATE

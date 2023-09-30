@@ -3,3 +3,7 @@
 	url = https://github.com/Ai-Thinker-Open/aithinker_Ai-M6X_SDK.git
 	branch = release/AiPi_Eyes_SDK
 	ignore = dirty
+[submodule "naett"]
+	path = naett
+	url = https://github.com/erkkah/naett.git
+	ignore = dirty

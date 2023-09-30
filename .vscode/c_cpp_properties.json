@@ -1,0 +1,18 @@
+{
+    "configurations": [
+        {
+            "name": "AiPi",
+            "includePath": [
+                "${workspaceFolder}/**"
+            ],
+            "defines": [
+                "LV_USE_DEMO_MUSIC"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c17",
+            "cppStandard": "gnu++17",
+            "intelliSenseMode": "linux-gcc-x64"
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,20 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "compile",
+            "type": "shell",
+            "command": "make ninja CHIP=bl616 BOARD=bl616dk COMX=/dev/ttyACM0",
+            "problemMatcher": "$gcc",
+            "options": {
+                "cwd": "${workspaceFolder}/AiPi-Eyes-jellyfin"
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            }
+        }
+    ]
+}

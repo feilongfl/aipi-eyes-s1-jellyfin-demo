@@ -341,26 +341,26 @@ static void queue_task(void* arg)
                 if (https_Handle!=NULL) {
                     vTaskDelete(https_Handle);
                 }
-                xTaskCreate(https_get_weather_task, "https task", 1024*6, NULL, 3, &https_Handle);
+                xTaskCreate(https_jellyfin_task, "https task", 1024*6, NULL, 3, &https_Handle);
                 break;
                 //接收天气情况
             case 3:
 
-                cjson_get_weather(queue_buff);
+                // cjson_get_weather(queue_buff);
 
-                if (ui->screen_type) {
-                    lv_label_set_text_fmt(ui->cont_4_label_3, "%s市", weathers[0].city);
-                    lv_label_set_text(ui->cont_4_label_4, weathers[0].wea);
-                    lv_label_set_text_fmt(ui->cont_4_label_temp, "%s°", weathers[0].tem_day);
-                    lv_label_set_text_fmt(ui->cont_4_label_7, "%.*s°", 2, weathers[1].tem_day);
-                    lv_label_set_text_fmt(ui->cont_4_label_8, "%.*s°", 2, weathers[2].tem_day);
-                    lv_label_set_text_fmt(ui->cont_4_label_9, "%.*s°", 2, weathers[3].tem_day);
-                    lv_img_set_src(ui->cont_4_img_clear, compare_wea_output_img_100x100(weathers[0].wea));
-                    lv_img_set_src(ui->cont_4_img_3, compare_wea_output_img_20x20(weathers[1].wea));
-                    lv_img_set_src(ui->cont_4_img_2, compare_wea_output_img_20x20(weathers[2].wea));
-                    lv_img_set_src(ui->cont_4_img_1, compare_wea_output_img_20x20(weathers[3].wea));
+                // if (ui->screen_type) {
+                //     lv_label_set_text_fmt(ui->cont_4_label_3, "%s市", weathers[0].city);
+                //     lv_label_set_text(ui->cont_4_label_4, weathers[0].wea);
+                //     lv_label_set_text_fmt(ui->cont_4_label_temp, "%s°", weathers[0].tem_day);
+                //     lv_label_set_text_fmt(ui->cont_4_label_7, "%.*s°", 2, weathers[1].tem_day);
+                //     lv_label_set_text_fmt(ui->cont_4_label_8, "%.*s°", 2, weathers[2].tem_day);
+                //     lv_label_set_text_fmt(ui->cont_4_label_9, "%.*s°", 2, weathers[3].tem_day);
+                //     lv_img_set_src(ui->cont_4_img_clear, compare_wea_output_img_100x100(weathers[0].wea));
+                //     lv_img_set_src(ui->cont_4_img_3, compare_wea_output_img_20x20(weathers[1].wea));
+                //     lv_img_set_src(ui->cont_4_img_2, compare_wea_output_img_20x20(weathers[2].wea));
+                //     lv_img_set_src(ui->cont_4_img_1, compare_wea_output_img_20x20(weathers[3].wea));
 
-                }
+                // }
                 break;
             default:
                 break;

@@ -7,6 +7,7 @@
 #include <lwip/inet.h>
 #include <lwip/opt.h>
 #include <lwip/sockets.h>
+#include <naett.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -67,6 +68,10 @@ static const struct {
              }},
 };
 
+void http_parse_resp(char *resp, u16_t len) {
+  naettGetHeader(resp, "Content-Type");
+}
+
 static int http_get(enum JELLYFIN_REQ jreq) {
   static char *host_ip = NULL;
   static char req[1024];
@@ -126,7 +131,7 @@ static int http_get(enum JELLYFIN_REQ jreq) {
 }
 
 void https_jellyfin_task(void *arg) {
-  http_get(JELLYFIN_REQ_QuickConnect_Initiate);
+  // http_get(JELLYFIN_REQ_QuickConnect_Initiate);
   while (1) {
     vTaskDelay(1000);
   }

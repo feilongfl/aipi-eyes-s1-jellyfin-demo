@@ -12,6 +12,10 @@ file(GLOB_RECURSE sources "${CMAKE_CURRENT_SOURCE_DIR}/demos/*.c")
 include(wifi-password.conf)
 include(jellyfin.cmake)
 
+target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/../naett/naett.c ${CMAKE_CURRENT_LIST_DIR}/../naett/src/naett_lwip.c)
+sdk_add_include_directories(${CMAKE_CURRENT_LIST_DIR}/../naett/)
+sdk_add_include_directories(${CMAKE_CURRENT_LIST_DIR}/../naett/src)
+
 # sdk_add_compile_definitions(-DBL616_DHCP_DEBUG)
 target_sources(app PRIVATE
 

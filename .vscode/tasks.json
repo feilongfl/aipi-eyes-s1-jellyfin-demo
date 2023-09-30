@@ -15,6 +15,19 @@
                 "kind": "build",
                 "isDefault": true
             }
+        },
+        {
+            "label": "flash",
+            "type": "shell",
+            "command": "make ninja CHIP=bl616 BOARD=bl616dk COMX=/dev/ttyACM0 flash",
+            "problemMatcher": "$gcc",
+            "options": {
+                "cwd": "${workspaceFolder}/AiPi-Eyes-jellyfin"
+            },
+            "group": {
+                "kind": "test",
+                "isDefault": true
+            }
         }
     ]
 }

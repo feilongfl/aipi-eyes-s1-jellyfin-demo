@@ -28,7 +28,7 @@ struct HttpReq {
   const char *url;
 };
 
-static void genHttpReq(char *reqstr, struct HttpReq *req) {
+static void genHttpReq(char *reqstr, const struct HttpReq *req) {
   sprintf(reqstr,
           "GET %s HTTP/1.1\r\n"
           "Host: " FEILONG_JELLYFIN_SERVER_ADDR
@@ -68,7 +68,6 @@ static const struct {
 };
 
 static int http_get(enum JELLYFIN_REQ jreq) {
-  static struct sockaddr_in client_addr;
   static char *host_ip = NULL;
   static char req[1024];
   static struct netbuf *buffer;
@@ -122,6 +121,8 @@ static int http_get(enum JELLYFIN_REQ jreq) {
   if (buffer != NULL) {
     netbuf_delete(buffer);
   }
+
+  return ERR_OK;
 }
 
 void https_jellyfin_task(void *arg) {

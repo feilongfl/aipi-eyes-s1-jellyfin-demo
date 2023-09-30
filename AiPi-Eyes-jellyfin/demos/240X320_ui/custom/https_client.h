@@ -16,7 +16,8 @@ extern "C" {
 
     char* https_get_request(const char* host, const char* https_url);
     void https_get_weather_task(void* arg);
-    char* compare_wea_output_img_100x100(const char* weather_data);
+    void jellyfin_quick_login(void *arg);
+    char *compare_wea_output_img_100x100(const char *weather_data);
 #ifdef __cplusplus
 }
 #endif

@@ -33,13 +33,11 @@ struct HttpReq {
 
 static struct {
   unsigned char auth;
-  union {
-    struct {
-      char code[7];
-      char secret[65];
-    }; // quick login
-    struct {};
-  };
+  char code[7];
+  char secret[65];
+  char userid[33];
+  char apikey[33];
+  cJSON *lib;
 } JellyfinData;
 
 static void genHttpReq(char *reqstr, const struct HttpReq *req) {
@@ -51,7 +49,7 @@ static void genHttpReq(char *reqstr, const struct HttpReq *req) {
     url = url_fix_buffer;
   }
 
-  if (req->type == HTTP_GET)
+  if (req->type == HTTP_GET && JellyfinData.apikey[0] != 0) {
     sprintf(reqstr,
             "GET %s HTTP/1.1\r\n"
             "Host: " FEILONG_JELLYFIN_SERVER_ADDR ":" STR(
@@ -59,12 +57,50 @@ static void genHttpReq(char *reqstr, const struct HttpReq *req) {
                                               "User-Agent:"
                                               " " FEILONG_JELLYFIN_USER_AGENT
                                               "\r\n"
+                                              "Connection: keep-alive\r\n"
+                                              "Cache-Control: no-cache\r\n"
+                                              "Authorization: Mediabrowser "
+                                              "Token=\"%s\"\r\n"
+                                              "accept: application/json\r\n"
+                                              "\r\n",
+            url, JellyfinData.apikey);
+  } else if (req->type == HTTP_GET) {
+    sprintf(reqstr,
+            "GET %s HTTP/1.1\r\n"
+            "Host: " FEILONG_JELLYFIN_SERVER_ADDR ":" STR(
+                FEILONG_JELLYFIN_SERVER_PORT) "\r\n"
+                                              "User-Agent:"
+                                              " " FEILONG_JELLYFIN_USER_AGENT
+                                              "\r\n"
+                                              "Connection: keep-alive\r\n"
+                                              "Cache-Control: no-cache\r\n"
                                               "X-Emby-Authorization:"
                                               " " FEILONG_JELLYFIN_X_EMBY "\r\n"
                                               "accept: application/json\r\n"
                                               "\r\n",
             url);
-  else if (req->type == HTTP_POST && req->post_data != NULL) {
+  } else if (req->type == HTTP_POST && req->post_data != NULL &&
+             JellyfinData.apikey[0] != 0) {
+    req->post_data(url_post_buffer);
+    sprintf(
+        reqstr,
+        "POST %s HTTP/1.1\r\n"
+        "Host: " FEILONG_JELLYFIN_SERVER_ADDR ":" STR(
+            FEILONG_JELLYFIN_SERVER_PORT) "\r\n"
+                                          "User-Agent:"
+                                          " " FEILONG_JELLYFIN_USER_AGENT "\r\n"
+                                          "accept: application/json\r\n"
+                                          "Content-Type: application/json\r\n"
+                                          "Content-Length: %d\r\n"
+                                          "Connection: keep-alive\r\n"
+                                          "Cache-Control: no-cache\r\n"
+                                          "Authorization: Mediabrowser "
+                                          "Token=\"%s\"\r\n"
+                                          "\r\n"
+                                          "%s\r\n"
+                                          "\r\n",
+        url, strlen(url_post_buffer), JellyfinData.apikey, url_post_buffer);
+  } else if (req->type == HTTP_POST && req->post_data != NULL) {
     req->post_data(url_post_buffer);
     sprintf(
         reqstr,
@@ -78,6 +114,8 @@ static void genHttpReq(char *reqstr, const struct HttpReq *req) {
                                           "accept: application/json\r\n"
                                           "Content-Type: application/json\r\n"
                                           "Content-Length: %d\r\n"
+                                          "Connection: keep-alive\r\n"
+                                          "Cache-Control: no-cache\r\n"
                                           "\r\n"
                                           "%s\r\n"
                                           "\r\n",
@@ -92,28 +130,30 @@ enum JELLYFIN_REQ {
   JELLYFIN_REQ_QuickConnect_Connect,
   JELLYFIN_REQ_QuickConnect_Authenticate,
 
+  JELLYFIN_REQ_Users_Views,
+
   JELLYFIN_REQ_MAX
 };
 
-static void JELLYFIN_REQ_debug_cb(cJSON *jsonObject) {
+static int JELLYFIN_REQ_debug_cb(cJSON *jsonObject) {
   char *jsonString = cJSON_Print(jsonObject);
   printf("JELLYFIN_REQ_debug_cb:\r\n%s\r\n", jsonString);
 
   free(jsonString);
+  return 0;
 }
 
 static void JELLYFIN_REQ_QuickConnect_Authenticate_post_data(char *data) {
   sprintf(data, "{\"secret\":\"%s\"}", JellyfinData.secret);
 }
 
-static void JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
+static int JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
   cJSON *secret = cJSON_GetObjectItem(jsonObject, "Secret");
   if (secret == NULL) {
     printf("secret is NULL");
     return;
   }
   memcpy(JellyfinData.secret, secret->valuestring, 64);
-  // cJSON_Delete(secret);
   JellyfinData.secret[64] = 0;
   printf("Jellyfin: Secret: %s\r\n", JellyfinData.secret);
 
@@ -123,7 +163,6 @@ static void JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
     return;
   }
   memcpy(JellyfinData.code, qcode->valuestring, 6);
-  // cJSON_Delete(qcode);
   JellyfinData.code[6] = 0;
   printf("Jellyfin: qcode: %s\r\n", JellyfinData.code);
   setQuickLoginCode(JellyfinData.code);
@@ -135,16 +174,45 @@ static void JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
   }
   JellyfinData.auth = auth->valueint;
   printf("Jellyfin: auth: %d\r\n", JellyfinData.auth);
-  // cJSON_Delete(auth);
+
+  return 0;
+}
+
+static void JELLYFIN_REQ_QuickConnect_Authenticate_cb(cJSON *jsonObject) {
+  cJSON *user = cJSON_GetObjectItem(jsonObject, "User");
+  if (user == NULL) {
+    printf("user is NULL");
+    return;
+  }
+  cJSON *user_id = cJSON_GetObjectItem(user, "Id");
+  memcpy(JellyfinData.userid, user_id->valuestring, 32);
+  JellyfinData.userid[32] = 0;
+  printf("Jellyfin: userid: %s\r\n", JellyfinData.userid);
+
+  cJSON *apikey = cJSON_GetObjectItem(jsonObject, "AccessToken");
+  memcpy(JellyfinData.apikey, apikey->valuestring, 32);
+  JellyfinData.apikey[32] = 0;
+  printf("Jellyfin: apikey: %s\r\n", JellyfinData.apikey);
+  return 0;
+}
+
+static int JELLYFIN_REQ_Users_Views_cb(cJSON *jsonObject) {
+  JellyfinData.lib = jsonObject;
+  JELLYFIN_REQ_debug_cb(jsonObject);
+  return 1;
 }
 
 static void JELLYFIN_REQ_QuickConnect_Connect_url_fix(char *newurl, char *url) {
   sprintf(newurl, "%s?Secret=%s", url, JellyfinData.secret);
 }
 
+static void JELLYFIN_REQ_User_View_url_fix(char *newurl, char *url) {
+  sprintf(newurl, url, JellyfinData.userid);
+}
+
 static const struct {
   const struct HttpReq req;
-  void (*cb)(cJSON *jsonObject);
+  int (*cb)(cJSON *jsonObject);
 } JellfinTable[JELLYFIN_REQ_MAX] = {
     [JELLYFIN_REQ_QuickConnect_Initiate] =
         {.cb = JELLYFIN_REQ_QuickConnect_Initiate_cb,
@@ -162,13 +230,21 @@ static const struct {
                  .url = "/QuickConnect/Connect",
              }},
     [JELLYFIN_REQ_QuickConnect_Authenticate] =
-        {.cb = JELLYFIN_REQ_debug_cb,
+        {.cb = JELLYFIN_REQ_QuickConnect_Authenticate_cb,
          .req =
              {
                  .type = HTTP_POST,
                  .url = "/Users/AuthenticateWithQuickConnect",
                  .post_data = JELLYFIN_REQ_QuickConnect_Authenticate_post_data,
              }},
+    [JELLYFIN_REQ_Users_Views] = {.cb = JELLYFIN_REQ_Users_Views_cb,
+                                  .req =
+                                      {
+                                          .type = HTTP_GET,
+                                          .url_fix =
+                                              JELLYFIN_REQ_User_View_url_fix,
+                                          .url = "/Users/%s/Views",
+                                      }},
 };
 
 static err_t http_resp_parse(enum JELLYFIN_REQ jreq, char *resp, u16_t len) {
@@ -185,9 +261,9 @@ static err_t http_resp_parse(enum JELLYFIN_REQ jreq, char *resp, u16_t len) {
   if (!jsonObject)
     return ERR_CONN;
 
-  JellfinTable[jreq].cb(jsonObject);
+  if (!JellfinTable[jreq].cb(jsonObject))
+    cJSON_Delete(jsonObject);
 
-  cJSON_Delete(jsonObject);
   return ret;
 }
 
@@ -264,6 +340,8 @@ static int http_get(enum JELLYFIN_REQ jreq) {
 }
 
 void https_jellyfin_task(void *arg) {
+  memset(&JellyfinData, 0, sizeof(JellyfinData));
+
   http_get(JELLYFIN_REQ_QuickConnect_Initiate);
   while (!JellyfinData.auth) {
     vTaskDelay(5000);
@@ -274,6 +352,8 @@ void https_jellyfin_task(void *arg) {
   setQuickLoginCode("login...");
   http_get(JELLYFIN_REQ_QuickConnect_Authenticate);
   setQuickLoginCode("login success");
+  http_get(JELLYFIN_REQ_Users_Views);
+  libBrowser();
 
   while (1) {
     // get lib

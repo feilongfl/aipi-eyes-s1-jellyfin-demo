@@ -28,40 +28,69 @@ struct HttpReq {
   HtmlRequestMethod_TypeDef type;
   const char *url;
   void (*url_fix)(char *newurl, char *url);
+  void (*post_data)(char *data);
 };
 
 static struct {
   unsigned char auth;
-  char code[7];
-  char secret[65];
+  union {
+    struct {
+      char code[7];
+      char secret[65];
+    }; // quick login
+    struct {};
+  };
 } JellyfinData;
 
 static void genHttpReq(char *reqstr, const struct HttpReq *req) {
   static char url_fix_buffer[256];
+  static char url_post_buffer[1024];
   char *url = req->url;
   if (req->url_fix != NULL) {
     req->url_fix(url_fix_buffer, req->url);
     url = url_fix_buffer;
   }
 
-  sprintf(reqstr,
-          "GET %s HTTP/1.1\r\n"
-          "Host: " FEILONG_JELLYFIN_SERVER_ADDR
-          ":" STR(FEILONG_JELLYFIN_SERVER_PORT) "\r\n"
-                                                "User-Agent:"
-                                                " " FEILONG_JELLYFIN_USER_AGENT
-                                                "\r\n"
-                                                "X-Emby-Authorization:"
-                                                " " FEILONG_JELLYFIN_X_EMBY
-                                                "\r\n"
-                                                "accept: application/json\r\n"
-                                                "\r\n",
-          url);
+  if (req->type == HTTP_GET)
+    sprintf(reqstr,
+            "GET %s HTTP/1.1\r\n"
+            "Host: " FEILONG_JELLYFIN_SERVER_ADDR ":" STR(
+                FEILONG_JELLYFIN_SERVER_PORT) "\r\n"
+                                              "User-Agent:"
+                                              " " FEILONG_JELLYFIN_USER_AGENT
+                                              "\r\n"
+                                              "X-Emby-Authorization:"
+                                              " " FEILONG_JELLYFIN_X_EMBY "\r\n"
+                                              "accept: application/json\r\n"
+                                              "\r\n",
+            url);
+  else if (req->type == HTTP_POST && req->post_data != NULL) {
+    req->post_data(url_post_buffer);
+    sprintf(
+        reqstr,
+        "POST %s HTTP/1.1\r\n"
+        "Host: " FEILONG_JELLYFIN_SERVER_ADDR ":" STR(
+            FEILONG_JELLYFIN_SERVER_PORT) "\r\n"
+                                          "User-Agent:"
+                                          " " FEILONG_JELLYFIN_USER_AGENT "\r\n"
+                                          "X-Emby-Authorization:"
+                                          " " FEILONG_JELLYFIN_X_EMBY "\r\n"
+                                          "accept: application/json\r\n"
+                                          "Content-Type: application/json\r\n"
+                                          "Content-Length: %d\r\n"
+                                          "\r\n"
+                                          "%s\r\n"
+                                          "\r\n",
+        url, strlen(url_post_buffer), url_post_buffer);
+  } else {
+    // todo:
+  }
 }
 
 enum JELLYFIN_REQ {
   JELLYFIN_REQ_QuickConnect_Initiate,
   JELLYFIN_REQ_QuickConnect_Connect,
+  JELLYFIN_REQ_QuickConnect_Authenticate,
 
   JELLYFIN_REQ_MAX
 };
@@ -71,6 +100,10 @@ static void JELLYFIN_REQ_debug_cb(cJSON *jsonObject) {
   printf("JELLYFIN_REQ_debug_cb:\r\n%s\r\n", jsonString);
 
   free(jsonString);
+}
+
+static void JELLYFIN_REQ_QuickConnect_Authenticate_post_data(char *data) {
+  sprintf(data, "{\"secret\":\"%s\"}", JellyfinData.secret);
 }
 
 static void JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
@@ -93,6 +126,7 @@ static void JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
   // cJSON_Delete(qcode);
   JellyfinData.code[6] = 0;
   printf("Jellyfin: qcode: %s\r\n", JellyfinData.code);
+  setQuickLoginCode(JellyfinData.code);
 
   cJSON *auth = cJSON_GetObjectItem(jsonObject, "Authenticated");
   if (auth == NULL) {
@@ -127,6 +161,14 @@ static const struct {
                  .url_fix = JELLYFIN_REQ_QuickConnect_Connect_url_fix,
                  .url = "/QuickConnect/Connect",
              }},
+    [JELLYFIN_REQ_QuickConnect_Authenticate] =
+        {.cb = JELLYFIN_REQ_debug_cb,
+         .req =
+             {
+                 .type = HTTP_POST,
+                 .url = "/Users/AuthenticateWithQuickConnect",
+                 .post_data = JELLYFIN_REQ_QuickConnect_Authenticate_post_data,
+             }},
 };
 
 static err_t http_resp_parse(enum JELLYFIN_REQ jreq, char *resp, u16_t len) {
@@ -151,7 +193,7 @@ static err_t http_resp_parse(enum JELLYFIN_REQ jreq, char *resp, u16_t len) {
 
 static int http_get(enum JELLYFIN_REQ jreq) {
   static char *host_ip = NULL;
-  static char req[1024];
+  static char req[1024 * 2];
   static struct netbuf *buffer;
   static struct netconn *conn;
   static ip_addr_t remote_ip;
@@ -187,48 +229,55 @@ static int http_get(enum JELLYFIN_REQ jreq) {
   }
   printf("netconn_write!\r\n");
 
-  res = netconn_recv(conn, &buffer);
-  if (res != ERR_OK) {
-    printf("netconn_recv failed %d!\r\n", res);
-  }
-
-  char *buf;
+  static char recv_buf[1024 * 8]; // resp is tooooooo big...
+  u16_t recv_buf_len = 0;
+  char *recv_buf_ptr = recv_buf;
   u16_t buflen;
+  do {
+    res = netconn_recv(conn, &buffer);
+    if (res != ERR_OK)
+      break;
 
-  netbuf_data(buffer, (void **)&buf, &buflen);
-  if (buflen > 0) {
-    // printf("netconn_recv len: %d\r\n", buflen);
-    // printf("netconn_recv p: %s\r\n", buf);
-    http_resp_parse(jreq, buf, buflen);
+    char *buf;
+
+    netbuf_data(buffer, (void **)&buf, &buflen);
+    if (buflen > 0) {
+      // printf("netconn_recv len: %d\r\n", buflen);
+      // printf("netconn_recv p: %s\r\n", buf);
+      memcpy(recv_buf_ptr + recv_buf_len, buf, buflen);
+      recv_buf_len += buflen;
+    }
+
+    if (buffer != NULL) {
+      netbuf_delete(buffer);
+    }
+  } while (buflen == 1360);
+
+  if (recv_buf_len) {
+    recv_buf[recv_buf_len] = 0;
+    printf("netconn_recv len: %d\r\n", recv_buf_len);
+    printf("netconn_recv p: %s\r\n", recv_buf);
+    http_resp_parse(jreq, recv_buf, recv_buf_len);
   }
-
-  if (buffer != NULL) {
-    netbuf_delete(buffer);
-  }
-
-  // netconn_disconnect(conn);
-  // netconn_close(conn);
 
   return ERR_OK;
 }
 
-// static cJSON_Hooks cjson_hook = {
-//     .malloc_fn = pvPortMalloc,
-//     .free_fn = vPortFree,
-// };
-
 void https_jellyfin_task(void *arg) {
-  // cJSON_InitHooks(&cjson_hook);
-
   http_get(JELLYFIN_REQ_QuickConnect_Initiate);
   while (!JellyfinData.auth) {
+    vTaskDelay(5000);
     http_get(JELLYFIN_REQ_QuickConnect_Connect);
-    vTaskDelay(1000);
   }
 
   // login in
+  setQuickLoginCode("login...");
+  http_get(JELLYFIN_REQ_QuickConnect_Authenticate);
 
-  // get lib
+  while (1) {
+    // get lib
 
-  // play music
+    // play music
+    vTaskDelay(1000);
+  }
 }

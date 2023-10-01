@@ -308,7 +308,7 @@ int main(void)
     board_init();
     // audio_init();
     // audio_pcm_init();
-    // es8388_voice_init();
+    es8388_voice_init();
 
     // uart0 = bflb_device_get_by_name("uart0");
     // shell_init_with_task(uart0);

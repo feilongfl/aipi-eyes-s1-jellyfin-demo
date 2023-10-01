@@ -16,7 +16,7 @@ include(jellyfin.cmake)
 target_sources(app PRIVATE
 
    # audio.c
-   audio_pcm.c
+   8388_pcm.c
 
    # 8388_pcm.c
    bsp_es8388.c

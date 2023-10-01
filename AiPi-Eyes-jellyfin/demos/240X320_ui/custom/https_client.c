@@ -18,6 +18,9 @@
 extern TaskHandle_t https_Handle;
 extern xQueueHandle queue;
 
+char *HTTP_JELLYFIN_Lib = NULL;
+char *HTTP_JELLYFIN_MUSIC = NULL;
+
 typedef enum {
   HTTP_POST,
   HTTP_GET,
@@ -37,7 +40,6 @@ static struct {
   char secret[65];
   char userid[33];
   char apikey[33];
-  cJSON *lib;
 } JellyfinData;
 
 static void genHttpReq(char *reqstr, const struct HttpReq *req) {
@@ -131,6 +133,7 @@ enum JELLYFIN_REQ {
   JELLYFIN_REQ_QuickConnect_Authenticate,
 
   JELLYFIN_REQ_Users_Views,
+  JELLYFIN_REQ_Users_Items,
 
   JELLYFIN_REQ_MAX
 };
@@ -139,7 +142,7 @@ static int JELLYFIN_REQ_debug_cb(cJSON *jsonObject) {
   char *jsonString = cJSON_Print(jsonObject);
   printf("JELLYFIN_REQ_debug_cb:\r\n%s\r\n", jsonString);
 
-  free(jsonString);
+  // todo: is this need free?
   return 0;
 }
 
@@ -178,7 +181,7 @@ static int JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
   return 0;
 }
 
-static void JELLYFIN_REQ_QuickConnect_Authenticate_cb(cJSON *jsonObject) {
+static int JELLYFIN_REQ_QuickConnect_Authenticate_cb(cJSON *jsonObject) {
   cJSON *user = cJSON_GetObjectItem(jsonObject, "User");
   if (user == NULL) {
     printf("user is NULL");
@@ -197,9 +200,15 @@ static void JELLYFIN_REQ_QuickConnect_Authenticate_cb(cJSON *jsonObject) {
 }
 
 static int JELLYFIN_REQ_Users_Views_cb(cJSON *jsonObject) {
-  JellyfinData.lib = jsonObject;
+  printf("libBrowser\n");
+  libBrowser(jsonObject);
+
+  return 0;
+}
+
+static int JELLYFIN_REQ_Users_Items_cb(cJSON *jsonObject) {
   JELLYFIN_REQ_debug_cb(jsonObject);
-  return 1;
+  return 0;
 }
 
 static void JELLYFIN_REQ_QuickConnect_Connect_url_fix(char *newurl, char *url) {
@@ -208,6 +217,11 @@ static void JELLYFIN_REQ_QuickConnect_Connect_url_fix(char *newurl, char *url) {
 
 static void JELLYFIN_REQ_User_View_url_fix(char *newurl, char *url) {
   sprintf(newurl, url, JellyfinData.userid);
+}
+
+static void JELLYFIN_REQ_Users_Items_url_fix(char *newurl, char *url) {
+  // http://192.168.10.110:8096/Users/c45083f066864d658bbeb7fe9a9b443d/Items?SortBy=Album%2CSortName&SortOrder=Ascending&IncludeItemTypes=Audio&Recursive=true&Fields=AudioInfo%2CParentId&StartIndex=0&ImageTypeLimit=1&EnableImageTypes=Primary&Limit=100&ParentId=28e9960207c978c0d9aaefc8ae2d3a79
+  sprintf(newurl, url, JellyfinData.userid, HTTP_JELLYFIN_Lib, 10);
 }
 
 static const struct {
@@ -245,6 +259,14 @@ static const struct {
                                               JELLYFIN_REQ_User_View_url_fix,
                                           .url = "/Users/%s/Views",
                                       }},
+    [JELLYFIN_REQ_Users_Items] =
+        {.cb = JELLYFIN_REQ_Users_Items_cb,
+         .req =
+             {
+                 .type = HTTP_GET,
+                 .url_fix = JELLYFIN_REQ_Users_Items_url_fix,
+                 .url = "/Users/%s/Items?ParentId%s&Limit=%d",
+             }},
 };
 
 static err_t http_resp_parse(enum JELLYFIN_REQ jreq, char *resp, u16_t len) {
@@ -353,12 +375,15 @@ void https_jellyfin_task(void *arg) {
   http_get(JELLYFIN_REQ_QuickConnect_Authenticate);
   setQuickLoginCode("login success");
   http_get(JELLYFIN_REQ_Users_Views);
-  libBrowser();
 
-  while (1) {
-    // get lib
-
-    // play music
-    vTaskDelay(1000);
+  while (HTTP_JELLYFIN_Lib == NULL) {
+    vTaskDelay(5000);
   }
+  http_get(JELLYFIN_REQ_Users_Items);
+
+  while (HTTP_JELLYFIN_MUSIC == NULL) {
+    vTaskDelay(5000);
+  }
+
+  // playmusic
 }

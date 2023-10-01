@@ -19,7 +19,7 @@ void quickLogin() {
   lv_obj_t *logincode_msg = lv_label_create(page);
   lv_label_set_text(logincode_msg, "Quick Login Code:");
   lv_P_login_O_logincode = lv_label_create(page);
-  lv_label_set_text(lv_P_login_O_logincode, "Loading...");
+  lv_label_set_text(lv_P_login_O_logincode, "Booting...");
 }
 
 

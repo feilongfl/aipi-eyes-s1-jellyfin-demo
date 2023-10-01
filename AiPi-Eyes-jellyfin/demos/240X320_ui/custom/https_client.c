@@ -273,6 +273,7 @@ void https_jellyfin_task(void *arg) {
   // login in
   setQuickLoginCode("login...");
   http_get(JELLYFIN_REQ_QuickConnect_Authenticate);
+  setQuickLoginCode("login success");
 
   while (1) {
     // get lib

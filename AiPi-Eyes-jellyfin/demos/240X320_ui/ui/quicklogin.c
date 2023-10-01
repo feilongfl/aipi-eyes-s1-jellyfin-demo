@@ -33,19 +33,32 @@ static void libList_create_event(lv_event_t *e) {
   printf("button click");
 }
 
-static void libList_create(lv_obj_t *parent, char *name, char *id) {
-  char buff[50];
-  sprintf(buff, "%s - %s", name, id);
+static void libList_create_item_event(lv_event_t *e) {
+  char *data = lv_event_get_user_data(e);
+  HTTP_JELLYFIN_MUSIC = data;
+  printf("button click");
+}
+
+static void libList_create(lv_obj_t *parent, char *name, char *id,
+                           unsigned char isFolder) {
+  // char buff[50];
+  // sprintf(buff, "%s - %s", name, id);
 
   char *idbuf = malloc(33);
   memcpy(idbuf, id, 32); // 懒得free
   idbuf[32] = 0;
 
   lv_obj_t *btn = lv_btn_create(parent);
-  lv_obj_add_event_cb(btn, libList_create_event, LV_EVENT_CLICKED, idbuf);
+  if (isFolder) {
+    lv_obj_add_event_cb(btn, libList_create_event, LV_EVENT_CLICKED, idbuf);
+  } else {
+    lv_obj_add_event_cb(btn, libList_create_item_event, LV_EVENT_CLICKED,
+                        idbuf);
+  }
   lv_obj_t *label = lv_label_create(btn);
 
-  lv_label_set_text(label, buff);
+  // lv_label_set_text(label, buff);
+  lv_label_set_text(label, name);
 }
 
 void libBrowser(cJSON *lib) {
@@ -82,7 +95,13 @@ void libBrowser(cJSON *lib) {
       printf("id[%d] == NULL\n", i);
       goto err;
     }
-    libList_create(page, name->valuestring, id->valuestring);
+    cJSON *isFolder = cJSON_GetObjectItem(item, "IsFolder");
+    if (isFolder == NULL) {
+      printf("isFolder[%d] == NULL\n", i);
+      goto err;
+    }
+    libList_create(page, name->valuestring, id->valuestring,
+                   isFolder->valueint);
   }
   printf("create done\n");
 

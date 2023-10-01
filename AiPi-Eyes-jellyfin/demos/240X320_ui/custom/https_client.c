@@ -200,14 +200,15 @@ static int JELLYFIN_REQ_QuickConnect_Authenticate_cb(cJSON *jsonObject) {
 }
 
 static int JELLYFIN_REQ_Users_Views_cb(cJSON *jsonObject) {
-  printf("libBrowser\n");
   libBrowser(jsonObject);
 
   return 0;
 }
 
 static int JELLYFIN_REQ_Users_Items_cb(cJSON *jsonObject) {
-  JELLYFIN_REQ_debug_cb(jsonObject);
+  // JELLYFIN_REQ_debug_cb(jsonObject);
+  libBrowser(jsonObject);
+
   return 0;
 }
 
@@ -265,7 +266,7 @@ static const struct {
              {
                  .type = HTTP_GET,
                  .url_fix = JELLYFIN_REQ_Users_Items_url_fix,
-                 .url = "/Users/%s/Items?ParentId%s&Limit=%d",
+                 .url = "/Users/%s/Items?ParentId=%s&Limit=%d",
              }},
 };
 
@@ -386,4 +387,8 @@ void https_jellyfin_task(void *arg) {
   }
 
   // playmusic
+  printf("play music: %s/%s\n", HTTP_JELLYFIN_Lib, HTTP_JELLYFIN_MUSIC);
+
+  while (1)
+    vTaskDelay(5000); // wait forever
 }

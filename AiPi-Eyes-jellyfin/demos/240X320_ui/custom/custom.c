@@ -6,30 +6,27 @@
  *
  */
 
- /*********************
-  *      INCLUDES
-  *********************/
-#include <stdio.h>
-#include "lvgl.h"
+/*********************
+ *      INCLUDES
+ *********************/
 #include "custom.h"
-#include "gui_guider.h"
 #include "FreeRTOS.h"
-#include "task.h"
-#include "timers.h"
-#include "easyflash.h"
-#include "queue.h"
-#include "cJSON.h"
-#include "sntp.h"
 #include "bflb_timestamp.h"
+#include "cJSON.h"
 #include "easyflash.h"
 #include "https_client.h"
-  /*********************
-   *      DEFINES
-   *********************/
+#include "lvgl.h"
+#include "queue.h"
+#include "sntp.h"
+#include "task.h"
+#include "timers.h"
+#include <stdio.h>
+/*********************
+ *      DEFINES
+ *********************/
 #define UTC_CHINA 8
 uint8_t wifi_connect(char* ssid, char* passwd);
 TaskHandle_t https_Handle;
-weather_t weathers[4] = { 0 };
 
 void sntp_set_time(uint32_t sntp_time, uint32_t fac);
 /**********************
@@ -169,8 +166,7 @@ static void queue_task(void* arg)
     char* queue_buff = NULL;
     char* ssid = NULL;
     char* password = NULL;
-    char* ipv4_addr = NULL;
-    lv_ui* ui = (lv_ui*)arg;
+    char *ipv4_addr = NULL;
     ssid = flash_get_data(SSID_KEY, 32);
     password = flash_get_data(PASS_KEY, 32);
     if (ssid!=NULL && strlen(ssid)>0)
@@ -205,18 +201,9 @@ static void queue_task(void* arg)
                 printf("[%s] ipv4 addr=%s\r\n", __func__, ipv4_addr);
                 memset(queue_buff, 0, 1024*2);
                 sprintf(queue_buff, "IP:%s", ipv4_addr);
-                ui->wifi_stayus = true;
 
-                strcpy(ui->ssid, ssid);
-                strcpy(ui->password, password);
                 //识别当前界面
-                if (ui->screen_type) {
-                    lv_img_set_src(ui->cont_4_img_connet, &_wifi_alpha_16x16);
-                }
-                else {
-                    lv_label_set_text(ui->WiFi_config_label_10, queue_buff);
-                    lv_event_send(ui->WiFi_config_imgbtn_1, LV_EVENT_CLICKED, NULL);//手动发送事件，返回首页
-                }
+
                 vPortFree(ssid);
                 vPortFree(password);
                 vPortFree(ipv4_addr);
@@ -244,12 +231,11 @@ static void queue_task(void* arg)
   * Create a demo application
   */
 
-void custom_init(lv_ui* ui)
-{
-    /* Add your codes here */
-    queue = xQueueCreate(1, 1024*2);
-    xTaskCreate(queue_task, "queue task", 1024*6, ui, 2, NULL);
-
+void custom_init() {
+  quickLogin();
+  /* Add your codes here */
+  queue = xQueueCreate(1, 1024 * 2);
+  xTaskCreate(queue_task, "queue task", 1024 * 6, NULL, 2, NULL);
 }
 /**
  * @brief 设置时间
@@ -267,17 +253,8 @@ void sntp_set_time(uint32_t sntp_time, uint32_t fac)
 
     bflb_timestamp_utc2time(stamp, &time_s);
 
-    cont_4_digital_clock_1_hour_value = time_s.hour;
-    cont_4_digital_clock_1_min_value = time_s.min;
-    cont_4_digital_clock_1_sec_value = time_s.sec;
-    cont_4_lable_1_yers = time_s.year;
-    cont_4_lable_1_month = time_s.mon;
-    cont_4_lable_1_day = time_s.mday;
-    cont_4_lable_1_wday = time_s.wday;
     if (https_Handle!=NULL)
-        vTaskResume(https_Handle);
-    printf(" %d/%d/%d.week%d-%02d:%02d:%02d\r\n", time_s.year, time_s.mon, time_s.mday, time_s.wday, cont_4_digital_clock_1_hour_value, cont_4_digital_clock_1_min_value, cont_4_digital_clock_1_sec_value);
-
+      vTaskResume(https_Handle);
 }
 /**
  * @brief

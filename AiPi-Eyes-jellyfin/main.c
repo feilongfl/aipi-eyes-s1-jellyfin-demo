@@ -60,7 +60,7 @@
 #include "lcd.h"
 #include "portable.h"
   //#include "fhost.h"
-#include "gui_guider.h"
+// #include "gui_guider.h"
 #include "custom.h"
 #include "easyflash.h"
 #include "bflb_mtd.h"
@@ -302,8 +302,6 @@ void lwip_sntp_init(void)
     printf("getservername:%s\r\n", sntp_getservername(0));
 }
 
-lv_ui guider_ui;
-
 int main(void)
 {
 
@@ -328,11 +326,9 @@ int main(void)
     lv_port_disp_init();
     lv_port_indev_init();
 
-    setup_ui(&guider_ui);
-
     printf("lv_task_handler\r\n");
     // lv_task_handler();
-    custom_init(&guider_ui);
+    custom_init();
     printf("lvgl success\r\n");
     xTaskCreate(lvgl_task, (char*)"lvgl", LVGL_STACK_SIZE, NULL, LVGL_TASK_PRIORITY, &lvgl_TaskHandle);
     // printf("HeapSize:%d\r\n",xPortGetFreeHeapSize());

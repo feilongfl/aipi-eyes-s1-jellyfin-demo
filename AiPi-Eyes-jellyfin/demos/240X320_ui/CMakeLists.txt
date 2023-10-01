@@ -14,7 +14,7 @@
 # generated/guider_fonts/lv_font_simsun_12.c
 # generated/images/_wifi_alpha_16x16.c
 # )
-file(GLOB_RECURSE SOURCES "custom/*.c" "guider_fonts/*.c" "images/*.c" "./*.c")
+file(GLOB_RECURSE SOURCES "custom/*.c" "ui/*.c")
 sdk_add_include_directories(.)
 
 add_library(ui ${SOURCES})

@@ -31,6 +31,7 @@ struct HttpReq {
 };
 
 static struct {
+  unsigned char auth;
   char code[7];
   char secret[65];
 } JellyfinData;
@@ -81,8 +82,7 @@ static void JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
   memcpy(JellyfinData.secret, secret->valuestring, 64);
   // cJSON_Delete(secret);
   JellyfinData.secret[64] = 0;
-  printf("JELLYFIN_REQ_QuickConnect_Initiate_cb: Secret: %s\r\n",
-         JellyfinData.secret);
+  printf("Jellyfin: Secret: %s\r\n", JellyfinData.secret);
 
   cJSON *qcode = cJSON_GetObjectItem(jsonObject, "Code");
   if (qcode == NULL) {
@@ -92,16 +92,15 @@ static void JELLYFIN_REQ_QuickConnect_Initiate_cb(cJSON *jsonObject) {
   memcpy(JellyfinData.code, qcode->valuestring, 6);
   // cJSON_Delete(qcode);
   JellyfinData.code[6] = 0;
-  printf("JELLYFIN_REQ_QuickConnect_Initiate_cb: qcode: %s\r\n",
-         JellyfinData.code);
+  printf("Jellyfin: qcode: %s\r\n", JellyfinData.code);
 
   cJSON *auth = cJSON_GetObjectItem(jsonObject, "Authenticated");
   if (auth == NULL) {
     printf("auth is NULL");
     return;
   }
-  printf("JELLYFIN_REQ_QuickConnect_Initiate_cb: auth: %d: %d\r\n", auth->type,
-         auth->valueint);
+  JellyfinData.auth = auth->valueint;
+  printf("Jellyfin: auth: %d\r\n", JellyfinData.auth);
   // cJSON_Delete(auth);
 }
 
@@ -222,8 +221,14 @@ void https_jellyfin_task(void *arg) {
   // cJSON_InitHooks(&cjson_hook);
 
   http_get(JELLYFIN_REQ_QuickConnect_Initiate);
-  while (1) {
+  while (!JellyfinData.auth) {
     http_get(JELLYFIN_REQ_QuickConnect_Connect);
     vTaskDelay(1000);
   }
+
+  // login in
+
+  // get lib
+
+  // play music
 }

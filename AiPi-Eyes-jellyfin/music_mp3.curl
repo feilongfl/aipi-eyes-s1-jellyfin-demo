@@ -1,4 +1,4 @@
-curl 'http://192.168.10.110:8096/Audio/ca6d68582302e6e6fdcb576974db06e9/universal?UserId=c45083f066864d658bbeb7fe9a9b443d&DeviceId=TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvMTE2LjAuMC4wIFNhZmFyaS81MzcuMzZ8MTY5NjA1OTYyNjg2MA11&audioBitRate=96000&audioCodec=wav&transcodingContainer=wav&api_key=86d7bbfa776748a1afa742f28b8c4cc9&PlaySessionId=1696157558093&StartTimeTicks=0&EnableRedirection=true&EnableRemoteMedia=false' \
+curl 'http://192.168.10.110:8096/Audio/ca6d68582302e6e6fdcb576974db06e9/universal?UserId=c45083f066864d658bbeb7fe9a9b443d&DeviceId=TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvMTE2LjAuMC4wIFNhZmFyaS81MzcuMzZ8MTY5NjA1OTYyNjg2MA11&audioBitRate=96000&audioCodec=opus&transcodingContainer=opus&api_key=86d7bbfa776748a1afa742f28b8c4cc9&PlaySessionId=1696157558093&StartTimeTicks=0&EnableRedirection=true&EnableRemoteMedia=false' \
   -H 'Accept: */*' \
   -H 'Cache-Control: no-cache' \
   -H 'Pragma: no-cache' \

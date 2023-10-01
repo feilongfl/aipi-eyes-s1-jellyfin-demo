@@ -365,6 +365,9 @@ static int http_get(enum JELLYFIN_REQ jreq) {
 void https_jellyfin_task(void *arg) {
   memset(&JellyfinData, 0, sizeof(JellyfinData));
 
+  while (1)
+    vTaskDelay(5000); // wait forever
+
   http_get(JELLYFIN_REQ_QuickConnect_Initiate);
   while (!JellyfinData.auth) {
     vTaskDelay(5000);
@@ -390,5 +393,5 @@ void https_jellyfin_task(void *arg) {
   printf("play music: %s/%s\n", HTTP_JELLYFIN_Lib, HTTP_JELLYFIN_MUSIC);
 
   while (1)
-    vTaskDelay(5000); // wait forever
+    vTaskDelay(20000); // wait forever
 }

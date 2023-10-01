@@ -41,41 +41,48 @@ xQueueHandle queue;
  *  STATIC PROTOTYPES
  **********************/
 
- /**
-  * @brief 解析json 类型
-  *
-  * @param json_data
-  * @return int
- */
-static int cjson__analysis_type(char* json_data)
-{
+static int parse_config_quick_login(char *json_data) { return 0; }
 
-    cJSON* root = cJSON_Parse(json_data);
+static int (*parse_config_table[QUEUE_CONFIG_MAX])(char *json_data) = {
+    [QUEUE_CONFIG_QUICKLOGIN] = parse_config_quick_login,
+};
 
-    if (root==NULL) {
-        printf("[%s] is not json\r\n", __func__);
-
-        return 0;
-    }
-    cJSON* wifi = cJSON_GetObjectItem(root, "WiFi");
-    if (wifi) {
-        cJSON_Delete(root);
-        return 1;
-    }
-    cJSON* ip = cJSON_GetObjectItem(root, "ip");
-    if (ip) {
-        cJSON_Delete(root);
-        return 2;
-    }
-
-    cJSON* weather = cJSON_GetObjectItem(root, "weather");
-    if (weather) {
-        cJSON_Delete(root);
-        return 3;
-    }
-
-    cJSON_Delete(root);
+static int parse_config(char *json_data) {
+  struct queue_config_header *header = (struct queue_config_header *)json_data;
+  if (header->type >= QUEUE_CONFIG_MAX)
     return 0;
+
+  return parse_config_table[header->type];
+}
+
+/**
+ * @brief 解析json 类型
+ *
+ * @param json_data
+ * @return int
+ */
+static int cjson__analysis_type(char *json_data) {
+
+  cJSON *root = cJSON_Parse(json_data);
+
+  if (root == NULL) {
+    printf("[%s] is not json\r\n", __func__);
+
+    return parse_config(json_data);
+  }
+  cJSON *wifi = cJSON_GetObjectItem(root, "WiFi");
+  if (wifi) {
+    cJSON_Delete(root);
+    return 1;
+  }
+  cJSON *ip = cJSON_GetObjectItem(root, "ip");
+  if (ip) {
+    cJSON_Delete(root);
+    return 2;
+  }
+
+  cJSON_Delete(root);
+  return 0;
 }
 
 /**
@@ -148,140 +155,15 @@ static char* cjson__analysis_ip(char* cjson_data)
     cJSON_Delete(root);
     return IP_str;
 }
-/**
- * @brief
- *
- * @param weather_data
-*/
-static void cjson_get_weather(char* weather_data)
-{
-    for (size_t i = 0; i < strlen(weather_data); i++)
-    {
-        printf("%c", weather_data[i]);
-    }
-    printf("\r\n");
-
-    cJSON* root = cJSON_Parse(weather_data);
-    if (root==NULL) {
-        printf("[%s] is not json\r\n", __func__);
-        return NULL;
-    }
-    cJSON* weather_cjson = cJSON_GetObjectItem(root, "weather");
-    cJSON* city_cjsno = cJSON_GetObjectItem(weather_cjson, "city");//城市名称
-    if (city_cjsno ==NULL) {
-
-        printf("[city_cjsno ] is not json\r\n");
-        cJSON_Delete(root);
-        return NULL;
-    }
-    cJSON* wea_data = cJSON_GetObjectItem(weather_cjson, "data");
-    if (wea_data ==NULL) {
-
-        printf("[wea_data] is not json\r\n");
-        cJSON_Delete(root);
-        return NULL;
-    }
-    cJSON* wea_today = cJSON_GetArrayItem(wea_data, 0);//今天天气
-    if (wea_today==NULL) {
-
-        printf("[wea_today] is not json\r\n");
-        cJSON_Delete(root);
-        return NULL;
-    }
-    cJSON* wea_tomorrow = cJSON_GetArrayItem(wea_data, 1);
-    if (wea_tomorrow==NULL) {
-        printf("[wea_tomorrow] is not json\r\n");
-        cJSON_Delete(root);
-        return NULL;
-    }
-    cJSON* wea_acquired = cJSON_GetArrayItem(wea_data, 2);
-    if (wea_acquired==NULL) {
-        printf("[wea_acquired] is not json\r\n");
-
-        cJSON_Delete(root);
-        return NULL;
-    }
-    cJSON* wea_today3 = cJSON_GetArrayItem(wea_data, 3);
-    if (wea_today3==NULL) {
-        printf("[wea_today3] is not json\r\n");
-        cJSON_Delete(root);
-        return NULL;
-    }
-    //解析今天天气
-    cJSON* today_wea = cJSON_GetObjectItem(wea_today, "wea");
-    cJSON* today_tem = cJSON_GetObjectItem(wea_today, "tem_day");
-    //解析明天的天气
-    cJSON* tomorrow_wea = cJSON_GetObjectItem(wea_tomorrow, "wea");
-    cJSON* tomorrow_tem = cJSON_GetObjectItem(wea_tomorrow, "tem_day");
-    //解析后天的天气
-    cJSON* acquired_wea = cJSON_GetObjectItem(wea_acquired, "wea");
-    cJSON* acquired_tem = cJSON_GetObjectItem(wea_acquired, "tem_day");
-    //解析大后天天气
-    cJSON* today3_wea = cJSON_GetObjectItem(wea_today3, "wea");
-    cJSON* today3_tem = cJSON_GetObjectItem(wea_today3, "tem_day");
-
-    memcpy(weathers[0].city, city_cjsno->valuestring, strlen(city_cjsno->valuestring));
-    memcpy(weathers[0].wea, today_wea->valuestring, strlen(today_wea->valuestring));
-    memcpy(weathers[0].tem_day, today_tem->valuestring, strlen(today_tem->valuestring));
-
-    memcpy(weathers[1].wea, tomorrow_wea->valuestring, strlen(tomorrow_wea->valuestring));
-    memcpy(weathers[1].tem_day, tomorrow_tem->valuestring, strlen(tomorrow_tem->valuestring));
-
-    memcpy(weathers[2].wea, acquired_wea->valuestring, strlen(acquired_wea->valuestring));
-    memcpy(weathers[2].tem_day, acquired_tem->valuestring, strlen(acquired_tem->valuestring));
-
-    memcpy(weathers[3].wea, today3_wea->valuestring, strlen(today3_wea->valuestring));
-    memcpy(weathers[3].tem_day, today3_tem->valuestring, strlen(today3_tem->valuestring));
-
-
-    cJSON_Delete(root);
-}
-/**
- * @brief 输出图片
- *
- * @param weather_data
- * @return char*
-*/
 char* compare_wea_output_img_100x100(const char* weather_data)
-{
-    char* weather = weather_data;
-
-    if (strncmp(weather, "晴", 2)==0) return &_tianqiqing_alpha_100x100;
-    if (strncmp(weather, "阵雨", 4)==0) return &_tianqiduoyunxiaoyuzhuanqing_alpha_100x100;
-    if (strncmp(weather, "小雨", 4)==0) return &_tianqixiaoyu_alpha_100x100;
-    if (strncmp(weather, "中雨", 4)==0) return &_tianqizhongyu_alpha_100x100;
-    if (strncmp(weather, "大雨", 4)==0) return &_tianqidayu_alpha_100x100;
-    if (strncmp(weather, "爆雨", 4)==0) return &_tianqidabaoyu_alpha_100x100;
-    if (strncmp(weather, "雷雨", 4)==0) return &_tianqiyeleiyu_alpha_100x100;
-    if (strncmp(weather, "多云", 4)==0) return &_tianqiduoyun_alpha_100x100;
-    if (strncmp(weather, "中雨转雷阵雨", 12)==0) return &_tianqizhongyu_alpha_100x100;
-    if (strncmp(weather, "雷阵雨", 6)==0) return &_tianqiyeleiyu_alpha_100x100;
-}
-/**
- * @brief
- *
- * @param weather_data
- * @return char*
-*/
+{}
 char* compare_wea_output_img_20x20(const char* weather_data)
-{
-    char* weather = weather_data;
-
-    if (strncmp(weather, "晴", 2)==0) return &_tianqiqing_i_alpha_20x20;
-    if (strncmp(weather, "阵雨", 4)==0) return &_tianqiqing_i_xiaoyuzhuanqing_alpha_20x20;
-    if (strncmp(weather, "小雨", 4)==0) return &_tianqiqing_i_xiaoyu_alpha_20x20;
-    if (strncmp(weather, "中雨", 4)==0) return &_tianqiqing_i_zhongyu_alpha_20x20;
-    ;
-    if (strncmp(weather, "大雨", 4)==0) return &_tianqiqing_i_dayu_alpha_20x20;
-    if (strncmp(weather, "爆雨", 4)==0) return &_tianqiqing_i_baoyu_alpha_20x20;
-    if (strncmp(weather, "雷雨", 4)==0) return &_tianqiqing_i_leiyu_alpha_20x20;
-    if (strncmp(weather, "多云", 4)==0) return &_tianqiqing_i_duoyun_alpha_20x20;
-}
+{}
 /**
  * @brief  void queue_task(void* arg)
  * 消息队列循环读取
  * @param arg
-*/
+ */
 static void queue_task(void* arg)
 {
     char* queue_buff = NULL;
@@ -341,26 +223,11 @@ static void queue_task(void* arg)
                 if (https_Handle!=NULL) {
                     vTaskDelete(https_Handle);
                 }
-                xTaskCreate(https_jellyfin_task, "https task", 1024*6, NULL, 3, &https_Handle);
+                xTaskCreate(https_jellyfin_task, "https task", 1024*10, NULL, 3, &https_Handle);
                 break;
                 //接收天气情况
             case 3:
 
-                // cjson_get_weather(queue_buff);
-
-                // if (ui->screen_type) {
-                //     lv_label_set_text_fmt(ui->cont_4_label_3, "%s市", weathers[0].city);
-                //     lv_label_set_text(ui->cont_4_label_4, weathers[0].wea);
-                //     lv_label_set_text_fmt(ui->cont_4_label_temp, "%s°", weathers[0].tem_day);
-                //     lv_label_set_text_fmt(ui->cont_4_label_7, "%.*s°", 2, weathers[1].tem_day);
-                //     lv_label_set_text_fmt(ui->cont_4_label_8, "%.*s°", 2, weathers[2].tem_day);
-                //     lv_label_set_text_fmt(ui->cont_4_label_9, "%.*s°", 2, weathers[3].tem_day);
-                //     lv_img_set_src(ui->cont_4_img_clear, compare_wea_output_img_100x100(weathers[0].wea));
-                //     lv_img_set_src(ui->cont_4_img_3, compare_wea_output_img_20x20(weathers[1].wea));
-                //     lv_img_set_src(ui->cont_4_img_2, compare_wea_output_img_20x20(weathers[2].wea));
-                //     lv_img_set_src(ui->cont_4_img_1, compare_wea_output_img_20x20(weathers[3].wea));
-
-                // }
                 break;
             default:
                 break;

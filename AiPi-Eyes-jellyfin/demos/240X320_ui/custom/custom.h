@@ -18,11 +18,28 @@ extern "C" {
 #define SSID_KEY "SSID"
 #define PASS_KEY "PASS"
 
-    typedef struct {
-        char city[16];
-        char wea[16];
-        char tem_day[2];
-    } weather_t;
+struct queue_config_header {
+  unsigned char type;
+};
+
+struct queue_config_quick_login {
+  struct queue_config_header header;
+
+  unsigned char auth;
+  char *code;
+};
+
+enum queue_config_index {
+  QUEUE_CONFIG_QUICKLOGIN,
+
+  QUEUE_CONFIG_MAX
+};
+
+typedef struct {
+  char city[16];
+  char wea[16];
+  char tem_day[2];
+} weather_t;
     extern int cont_4_digital_clock_1_hour_value;
     extern int cont_4_digital_clock_1_min_value;
     extern int cont_4_digital_clock_1_sec_value;

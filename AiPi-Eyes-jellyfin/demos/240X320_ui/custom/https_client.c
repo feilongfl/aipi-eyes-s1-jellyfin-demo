@@ -517,8 +517,9 @@ static void modify(char *buf, u16_t buflen) {
     tmpbuf_len = buflen;
     // printf("buf: %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", buf[0], buf[1],
     //        buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
-    modify_dma_start(tmpbuf, buf, buflen);
-    dma_i2s_tx_start(tmpbuf, tmpbuf_len); // cpu is fast then dma
+    modify_dma_start(tmpbuf+1, buf, buflen-1);
+    // modify_dma_start(tmpbuf, buf, buflen);
+    dma_i2s_tx_start(tmpbuf, tmpbuf_len); // modify dma is faster then this
   } else {
     dma_i2s_tx_start(buf, buflen);
   }

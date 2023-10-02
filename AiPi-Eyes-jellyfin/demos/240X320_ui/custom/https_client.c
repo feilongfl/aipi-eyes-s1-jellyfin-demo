@@ -388,8 +388,9 @@ static void gen_music_req(char *req, char *music) {
           ":" STR(FEILONG_JELLYFIN_SERVER_PORT) "\r\n"
                                                 "Accept: */*\r\n"
                                                 "Cache-Control: no-cache\r\n"
+                                                "Connection: keep-alive\r\n"
                                                 "DNT: 1\r\n"
-                                                "Pragma: no-cache\r\n"
+                                                "Pragma: naasdasdo-cache\r\n"
                                                 "Range: bytes=0-\r\n"
                                                 "User-Agent:"
                                                 " " FEILONG_JELLYFIN_USER_AGENT

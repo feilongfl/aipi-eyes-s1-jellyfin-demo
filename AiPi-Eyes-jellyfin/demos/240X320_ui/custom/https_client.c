@@ -426,6 +426,12 @@ static int play_music(char *music) {
     if (buflen > 0) {
       play_done = 0;
       dma_i2s_tx_start(buf, buflen);
+
+      // if (buf[0] == 'H' && buf[1] == 'T' && buf[2] == 'T' && buf[3] == 'P')
+      // for (int i = 0; i < buflen; i++) {
+      //   extern struct bflb_device_s *console;
+      //   bflb_uart_putchar(console, buf[i]);
+      // }
     }
 
     while(!play_done)
@@ -435,6 +441,8 @@ static int play_music(char *music) {
       netbuf_delete(buffer);
     }
   } while (buflen == 1360);
+
+  return 0;
 }
 
 void https_jellyfin_task(void *arg) {
@@ -457,12 +465,15 @@ void https_jellyfin_task(void *arg) {
   }
   http_get(JELLYFIN_REQ_Users_Items);
 
+play:
   while (HTTP_JELLYFIN_MUSIC == NULL) {
     vTaskDelay(5000);
   }
 
   // playmusic
   play_music(HTTP_JELLYFIN_MUSIC);
+  HTTP_JELLYFIN_MUSIC = NULL;
+  goto play;
 
   while (1)
     vTaskDelay(20000); // wait forever

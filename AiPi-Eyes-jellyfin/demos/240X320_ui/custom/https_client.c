@@ -448,12 +448,12 @@ static u16_t tmpbuf_len;
 void dma0_ch3_isr(void *arg) {
   bflb_dma_channel_stop(dma0_ch3);
   dma0_ch3_busy = 0;
-  printf("DMA_C3Control:%08x\n", *(unsigned int *)0x2000c40c);
-  printf("isr: %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", tmpbuf[0], tmpbuf[1],
-         tmpbuf[2], tmpbuf[3], tmpbuf[4], tmpbuf[5], tmpbuf[6], tmpbuf[7]);
+  // printf("DMA_C3Control:%08x\n", *(unsigned int *)0x2000c40c);
+  // printf("isr: %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", tmpbuf[0],
+  // tmpbuf[1],
+  //        tmpbuf[2], tmpbuf[3], tmpbuf[4], tmpbuf[5], tmpbuf[6], tmpbuf[7]);
   // printf("dma0_ch3_isr\n");
   // printf("DMA_C3Config:%08x\n", *(unsigned int *)0x2000c410);
-  dma_i2s_tx_start(tmpbuf, tmpbuf_len); // cpu is fast then dma
 }
 
 static void modify_dma_init() {
@@ -488,8 +488,8 @@ static void modify_dma_start(char *dst, char *src, uint32_t size) {
     ;
 
   dma0_ch3_busy = 1;
-  tx_transfers[0].src_addr = (uint32_t)dst;
-  tx_transfers[0].dst_addr = (uint32_t)src;
+  tx_transfers[0].src_addr = (uint32_t)src;
+  tx_transfers[0].dst_addr = (uint32_t)dst;
   tx_transfers[0].nbytes = size;
   bflb_dma_channel_lli_reload(dma0_ch3, tx_llipool, 1, tx_transfers, 1);
   // bflb_dma_channel_lli_link_head(dma0_ch3, tx_llipool, num);
@@ -515,9 +515,10 @@ static void modify(char *buf, u16_t buflen) {
     // }
     // modify_dma_start(tmpbuf, buf + 1, buflen - 1);
     tmpbuf_len = buflen;
-    printf("buf: %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", buf[0], buf[1],
-           buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
+    // printf("buf: %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", buf[0], buf[1],
+    //        buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
     modify_dma_start(tmpbuf, buf, buflen);
+    dma_i2s_tx_start(tmpbuf, tmpbuf_len); // cpu is fast then dma
   } else {
     dma_i2s_tx_start(buf, buflen);
   }

@@ -1,4 +1,5 @@
 #include "FreeRTOS.h"
+#include "bflb_dma.h"
 #include "cJSON.h"
 #include "custom.h"
 #include "queue.h"
@@ -438,13 +439,68 @@ static int scanner2(char c) {
 
   return 0;
 }
+struct bflb_device_s *dma0_ch3;
+
+static int dma0_ch3_busy = 0;
+static char tmpbuf[1500]; // >= 1360
+static u16_t tmpbuf_len;
+
+void dma0_ch3_isr(void *arg) {
+  bflb_dma_channel_stop(dma0_ch3);
+  dma0_ch3_busy = 0;
+  printf("DMA_C3Control:%08x\n", *(unsigned int *)0x2000c40c);
+  printf("isr: %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", tmpbuf[0], tmpbuf[1],
+         tmpbuf[2], tmpbuf[3], tmpbuf[4], tmpbuf[5], tmpbuf[6], tmpbuf[7]);
+  // printf("dma0_ch3_isr\n");
+  // printf("DMA_C3Config:%08x\n", *(unsigned int *)0x2000c410);
+  dma_i2s_tx_start(tmpbuf, tmpbuf_len); // cpu is fast then dma
+}
+
+static void modify_dma_init() {
+  struct bflb_dma_channel_config_s tx_config = {
+      .direction = DMA_MEMORY_TO_MEMORY,
+      .src_req = DMA_REQUEST_NONE,
+      .dst_req = DMA_REQUEST_NONE,
+      .src_addr_inc = DMA_ADDR_INCREMENT_ENABLE,
+      .dst_addr_inc = DMA_ADDR_INCREMENT_ENABLE,
+      .src_burst_count = DMA_BURST_INCR1,
+      .dst_burst_count = DMA_BURST_INCR1,
+      .src_width = DMA_DATA_WIDTH_8BIT,
+      .dst_width = DMA_DATA_WIDTH_8BIT,
+  };
+
+  printf("dma0-3 init\r\n");
+  dma0_ch3 = bflb_device_get_by_name("dma0_ch3");
+  bflb_dma_channel_init(dma0_ch3, &tx_config);
+  bflb_dma_channel_irq_attach(dma0_ch3, dma0_ch3_isr, NULL);
+  dma0_ch3_busy = 0;
+}
+
+static void modify_dma_start(char *dst, char *src, uint32_t size) {
+  static struct bflb_dma_channel_lli_transfer_s tx_transfers[1];
+  static struct bflb_dma_channel_lli_pool_s tx_llipool[1];
+
+  if (dma0_ch3_busy) {
+    printf("warn: dma0_ch3_busy\n");
+  }
+
+  while (dma0_ch3_busy)
+    ;
+
+  dma0_ch3_busy = 1;
+  tx_transfers[0].src_addr = (uint32_t)dst;
+  tx_transfers[0].dst_addr = (uint32_t)src;
+  tx_transfers[0].nbytes = size;
+  bflb_dma_channel_lli_reload(dma0_ch3, tx_llipool, 1, tx_transfers, 1);
+  // bflb_dma_channel_lli_link_head(dma0_ch3, tx_llipool, num);
+  bflb_dma_channel_start(dma0_ch3);
+}
 
 static int scanner(char c) { return scanner1(c) || scanner2(c); }
 
 static void modify(char *buf, u16_t buflen) {
   static unsigned char offset = 0;
   static unsigned char last_val = 0;
-  static char tmpbuf[1500]; // >= 1360
 
   for (int i = 0; i < buflen; i++) {
     if (scanner(buf[i])) {
@@ -454,10 +510,14 @@ static void modify(char *buf, u16_t buflen) {
 
   if (offset) {
     tmpbuf[0] = last_val;
-    for (int i = 1; i < buflen; i++) {
-      buf[i] = buf[i - 1];
-    }
-    dma_i2s_tx_start(tmpbuf, buflen); // cpu is fast then dma
+    // for (int i = 1; i < buflen; i++) {
+    //   buf[i] = buf[i - 1];
+    // }
+    // modify_dma_start(tmpbuf, buf + 1, buflen - 1);
+    tmpbuf_len = buflen;
+    printf("buf: %02x,%02x,%02x,%02x,%02x,%02x,%02x,%02x\n", buf[0], buf[1],
+           buf[2], buf[3], buf[4], buf[5], buf[6], buf[7]);
+    modify_dma_start(tmpbuf, buf, buflen);
   } else {
     dma_i2s_tx_start(buf, buflen);
   }
@@ -481,6 +541,8 @@ static int play_music(char *music) {
     return res;
   }
   printf("netconn_write!\r\n");
+
+  modify_dma_init();
 
   do {
     res = netconn_recv(conn, &buffer);

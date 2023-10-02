@@ -29,35 +29,11 @@ static ES8388_Cfg_Type ES8388Cfg = {
     .data_width = ES8388_DATA_LEN_16,        /*!< ES8388 I2S dataWitdh */
 };
 
-#define TEMP_BUF_SIZE 10 * 1024
-#define OPEN_ADDR  (0x210000 + 0x2000)
-#define OPEN_SIZE 73856//(73856 - 22656)
-#define CLOSE_ADDR 0x224000
-#define CLOSE_SIZE 76160//(76160 - 24960)
-static uint16_t temp1[TEMP_BUF_SIZE];
-// static uint16_t temp2[TEMP_BUF_SIZE];
-static uint32_t pcm_size = 0;
-static uint32_t pcm_addr = 0;
-static uint32_t play_size = 0;
-static int tmp_flag = 0;
-static uint8_t audac_dma_stop = 0;
-uint32_t read_size1 = 0;
-uint32_t read_size2 = 0;
-
-
-static int pcm_read(void);
 void dma_i2s_tx_start(char *buf, uint32_t size);
 
-void dma0_ch0_isr(void *arg)
-{
+void dma0_ch0_isr(void *arg) {
   printf("dma0_ch0_isr\r\n");
   bflb_dma_channel_stop(dma0_ch0);
-  if (audac_dma_stop == 1) {
-    audac_dma_stop = 0;
-    // bflb_dma_channel_stop(dma0_ch0);
-  } else {
-    // dma_i2s_tx_start(temp1, TEMP_BUF_SIZE);
-  }
 }
 
 void i2s_gpio_init()
@@ -82,30 +58,33 @@ void i2s_gpio_init()
     /* I2C0_SDA */
     bflb_gpio_init(gpio, GPIO_PIN_1, GPIO_FUNC_I2C0 | GPIO_ALTERNATE | GPIO_PULLUP | GPIO_SMT_EN | GPIO_DRV_2);
 }
+
 void i2s_init()
 {
-    struct bflb_i2s_config_s i2s_cfg = {
-        //.bclk_freq_hz = 16000 * 32 * 2, /* bclk = Sampling_rate * frame_width * channel_num */
-        .bclk_freq_hz = 24000 * 32 * 2,
-        .role = I2S_ROLE_MASTER,
-        .format_mode = I2S_MODE_LEFT_JUSTIFIED,
-        .channel_mode = I2S_CHANNEL_MODE_NUM_1,
-        .frame_width = I2S_SLOT_WIDTH_32,
-        .data_width = I2S_SLOT_WIDTH_16,
-        .fs_offset_cycle = 0,
+  struct bflb_i2s_config_s i2s_cfg = {
+      // .bclk_freq_hz = 16000 * 32 * 2, /* bclk = Sampling_rate * frame_width *
+      // channel_num */
+      // .bclk_freq_hz = 24000 * 32 * 2,
+      .bclk_freq_hz = 32000 * 32 * 2,
+      .role = I2S_ROLE_MASTER,
+      .format_mode = I2S_MODE_LEFT_JUSTIFIED,
+      .channel_mode = I2S_CHANNEL_MODE_NUM_1,
+      .frame_width = I2S_SLOT_WIDTH_32,
+      .data_width = I2S_SLOT_WIDTH_16,
+      .fs_offset_cycle = 0,
 
-        .tx_fifo_threshold = 0,
-        .rx_fifo_threshold = 0,
-    };
+      .tx_fifo_threshold = 0,
+      .rx_fifo_threshold = 0,
+  };
 
-    printf("i2s init\r\n");
-    i2s0 = bflb_device_get_by_name("i2s0");
-    /* i2s init */
-    bflb_i2s_init(i2s0, &i2s_cfg);
-    
-    /* enable dma */
-    bflb_i2s_link_txdma(i2s0, true);
-    bflb_i2s_link_rxdma(i2s0, true);
+  printf("i2s init\r\n");
+  i2s0 = bflb_device_get_by_name("i2s0");
+  /* i2s init */
+  bflb_i2s_init(i2s0, &i2s_cfg);
+
+  /* enable dma */
+  bflb_i2s_link_txdma(i2s0, true);
+  bflb_i2s_link_rxdma(i2s0, true);
 }
 void dma_tx_init() {
   struct bflb_dma_channel_config_s tx_config = {
@@ -146,21 +125,6 @@ void mclk_out_init()
     GLB_Set_Chip_Clock_Out2_Sel(GLB_CHIP_CLK_OUT_2_I2S_REF_CLK);
 }
 
-static TaskHandle_t sound_task_handler;
-static void sound_task(void *args) {
-  memset(temp1, 0, TEMP_BUF_SIZE);
-  printf("voice init:%d\r\n", TEMP_BUF_SIZE);
-  for (int i = 0; i < TEMP_BUF_SIZE; i++) {
-    *temp1 = i;
-  }
-  printf("voice init done:%d\r\n", TEMP_BUF_SIZE);
-
-  while (1) {
-    printf("voice trig:%d\r\n", TEMP_BUF_SIZE);
-    dma_i2s_tx_start(temp1, TEMP_BUF_SIZE);
-    vTaskDelay(1000); // wait forever
-  }
-}
 
 int es8388_voice_init(void)
 {
@@ -174,7 +138,7 @@ int es8388_voice_init(void)
     /* init ES8388 Codec */
     printf("es8388 init\n\r");
     ES8388_Init(&ES8388Cfg);
-    ES8388_Set_Voice_Volume(90);
+    ES8388_Set_Voice_Volume(30);
 
     /* mclk clkout init */
     mclk_out_init();
@@ -191,5 +155,4 @@ int es8388_voice_init(void)
     // while (1) {
     //     bflb_mtimer_delay_ms(10);
     // }
-    xTaskCreate(sound_task, (char *)"lvgl", 1024, NULL, 2, &sound_task_handler);
 }

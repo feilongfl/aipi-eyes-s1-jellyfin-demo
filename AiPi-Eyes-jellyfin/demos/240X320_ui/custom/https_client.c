@@ -398,6 +398,32 @@ static void gen_music_req(char *req, char *music) {
           music, JellyfinData.apikey);
 }
 
+static void modify(char *buf, u16_t buflen) {
+  unsigned int i, j;
+  const char tamplate[] = {
+      0x0d, 0x0a, 0x31, 0x30, 0x30, 0x30, 0x30, 0x0d, 0x0a,
+  };
+
+  static unsigned char offset = 0;
+
+  for (i = 0; i < buflen - sizeof(tamplate); i++) {
+    for (j = 0; j < sizeof(tamplate); j++) {
+      if (buf[i + j] != tamplate[j]) {
+        break;
+      }
+    }
+    if (j + 1 >= sizeof(tamplate)) {
+      offset = !offset;
+      printf("i=%d, j=%d, of=%d\n", i, j, offset);
+    }
+
+    if (offset)
+      buf[i] = buf[i + 1];
+  }
+
+  dma_i2s_tx_start(buf, buflen);
+}
+
 static int play_music(char *music) {
   printf("play music: %s\n", music);
 
@@ -426,7 +452,7 @@ static int play_music(char *music) {
     netbuf_data(buffer, (void **)&buf, &buflen);
     if (buflen > 0) {
       play_done = 0;
-      dma_i2s_tx_start(buf, buflen);
+      modify(buf, buflen);
 
       // if (buf[0] == 'H' && buf[1] == 'T' && buf[2] == 'T' && buf[3] == 'P')
       // for (int i = 0; i < buflen; i++) {

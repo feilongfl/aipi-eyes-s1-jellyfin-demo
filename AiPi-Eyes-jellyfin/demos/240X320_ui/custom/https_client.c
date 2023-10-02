@@ -413,7 +413,8 @@ static void modify(char *buf, u16_t buflen) {
       }
     }
     if (j + 1 >= sizeof(tamplate)) {
-      offset = !offset;
+      offset = !(i & 0x01);
+
       printf("i=%d, j=%d, of=%d\n", i, j, offset);
     }
 

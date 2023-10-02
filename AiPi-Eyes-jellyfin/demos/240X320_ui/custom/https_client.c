@@ -398,31 +398,66 @@ static void gen_music_req(char *req, char *music) {
           music, JellyfinData.apikey);
 }
 
-static void modify(char *buf, u16_t buflen) {
-  unsigned int i, j;
+static int scanner1(char c) {
+  static int location = 0;
   const char tamplate[] = {
       0x0d, 0x0a, 0x31, 0x30, 0x30, 0x30, 0x30, 0x0d, 0x0a,
   };
 
+  if (c == tamplate[location]) {
+    location++;
+  } else {
+    location = 0;
+  }
+
+  if (location >= sizeof(tamplate)) {
+    // match
+    return 1;
+  }
+
+  return 0;
+}
+
+static int scanner2(char c) {
+  static int location = 0;
+  const char tamplate[] = {0x0a, 0x31, 0x30, 0x30, 0x30,
+                           0x30, 0x0d, 0x0a, 0x0d};
+
+  if (c == tamplate[location]) {
+    location++;
+  } else {
+    location = 0;
+  }
+
+  if (location >= sizeof(tamplate)) {
+    // match
+    return 1;
+  }
+
+  return 0;
+}
+
+static int scanner(char c) { return scanner1(c) || scanner2(c); }
+
+static void modify(char *buf, u16_t buflen) {
+  unsigned int i, j;
+
   static unsigned char offset = 0;
 
-  for (i = 0; i < buflen - sizeof(tamplate); i++) {
-    for (j = 0; j < sizeof(tamplate); j++) {
-      if (buf[i + j] != tamplate[j]) {
-        break;
-      }
-    }
-    if (j + 1 >= sizeof(tamplate)) {
+  dma_i2s_tx_start(buf, buflen); // maybe cpu is fast then dma
+  for (i = 0; i < buflen; i++) {
+    if (scanner(buf[i])) {
       offset = !(i & 0x01);
-
-      printf("i=%d, j=%d, of=%d\n", i, j, offset);
     }
 
     if (offset)
       buf[i] = buf[i + 1];
   }
 
-  dma_i2s_tx_start(buf, buflen);
+  if (offset) {
+    buf[buflen - 1] = buf[buflen - 3];
+    buf[buflen - 2] = buf[buflen - 4];
+  }
 }
 
 static int play_music(char *music) {
@@ -455,11 +490,11 @@ static int play_music(char *music) {
       play_done = 0;
       modify(buf, buflen);
 
-      // if (buf[0] == 'H' && buf[1] == 'T' && buf[2] == 'T' && buf[3] == 'P')
-      // for (int i = 0; i < buflen; i++) {
-      //   extern struct bflb_device_s *console;
-      //   bflb_uart_putchar(console, buf[i]);
-      // }
+      if (buf[0] == 'H' && buf[1] == 'T' && buf[2] == 'T' && buf[3] == 'P')
+        for (int i = 0; i < buflen; i++) {
+          extern struct bflb_device_s *console;
+          bflb_uart_putchar(console, buf[i]);
+        }
     }
 
     while(!play_done)

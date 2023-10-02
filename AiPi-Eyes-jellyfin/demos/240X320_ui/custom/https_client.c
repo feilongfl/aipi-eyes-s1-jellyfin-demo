@@ -412,6 +412,7 @@ static int scanner1(char c) {
 
   if (location >= sizeof(tamplate)) {
     // match
+    location = 0;
     return 1;
   }
 
@@ -431,6 +432,7 @@ static int scanner2(char c) {
 
   if (location >= sizeof(tamplate)) {
     // match
+    location = 0;
     return 1;
   }
 
@@ -440,24 +442,26 @@ static int scanner2(char c) {
 static int scanner(char c) { return scanner1(c) || scanner2(c); }
 
 static void modify(char *buf, u16_t buflen) {
-  unsigned int i, j;
-
   static unsigned char offset = 0;
+  static unsigned char last_val = 0;
+  static char tmpbuf[1500]; // >= 1360
 
-  dma_i2s_tx_start(buf, buflen); // maybe cpu is fast then dma
-  for (i = 0; i < buflen; i++) {
+  for (int i = 0; i < buflen; i++) {
     if (scanner(buf[i])) {
       offset = !(i & 0x01);
     }
-
-    if (offset)
-      buf[i] = buf[i + 1];
   }
 
   if (offset) {
-    buf[buflen - 1] = buf[buflen - 3];
-    buf[buflen - 2] = buf[buflen - 4];
+    tmpbuf[0] = last_val;
+    for (int i = 1; i < buflen; i++) {
+      buf[i] = buf[i - 1];
+    }
+    dma_i2s_tx_start(tmpbuf, buflen); // cpu is fast then dma
+  } else {
+    dma_i2s_tx_start(buf, buflen);
   }
+  last_val = buf[buflen - 1];
 }
 
 static int play_music(char *music) {

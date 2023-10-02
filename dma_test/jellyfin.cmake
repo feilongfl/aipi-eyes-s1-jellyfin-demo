@@ -1,0 +1,11 @@
+set(FEILONG_JELLYFIN_SERVER_USE_DNS false)
+if(FEILONG_JELLYFIN_SERVER_USE_DNS)
+sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_USE_DNS)
+sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_ADDR="feilong-fipi.lan")
+else()
+sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_ADDR="192.168.10.109")
+endif()
+sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_PORT=8096)
+
+sdk_add_compile_definitions(-DFEILONG_JELLYFIN_USER_AGENT="feilong JellyfinBox")
+sdk_add_compile_definitions(-DFEILONG_JELLYFIN_X_EMBY="MediaBrowser Client=\\\"Jellyfin MCU\\\", Device=\\\"JellyfinBox\\\", DeviceId=\\\"TW96aWxsYS81LjAgKFgxMTsgTGludXggeDg2XzY0KSBBcHBsZVdlYktpdC81MzcuMzYgKEtIVE1MLCBsaWtlIEdlY2tvKSBDaHJvbWUvMTE2LjAuMC4wIFNhZmFyaS81MzcuMzZ8MTY5NDg2MTkwNDQ1NQ11\\\", Version=\\\"10.8.10\\\"")

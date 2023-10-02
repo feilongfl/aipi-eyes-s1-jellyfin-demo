@@ -290,11 +290,11 @@ static err_t http_resp_parse(enum JELLYFIN_REQ jreq, char *resp, u16_t len) {
   return ret;
 }
 
+static char req[1024 * 2];
+static struct netconn *conn;
 static int http_get(enum JELLYFIN_REQ jreq) {
   static char *host_ip = NULL;
-  static char req[1024 * 2];
   static struct netbuf *buffer;
-  static struct netconn *conn;
   static ip_addr_t remote_ip;
   volatile err_t res;
 
@@ -362,11 +362,83 @@ static int http_get(enum JELLYFIN_REQ jreq) {
   return ERR_OK;
 }
 
+#define MUSICBUFFER_SIZE (1500)
+static music_buffer[MUSICBUFFER_SIZE];
+
+void dma_i2s_tx_start(char *buf, uint32_t size);
+
+volatile int play_done = 0;
+
+void dma0_ch0_isr(void *arg) {
+  extern void *dma0_ch0;
+  bflb_dma_channel_stop(dma0_ch0);
+  // printf("dma0_ch0_isr\r\n");
+  play_done = 1;
+}
+
+static void gen_music_req(char *req, char *music) {
+  sprintf(req,
+          "GET /Audio/%s/universal?"
+          "Container=pcm&"
+          "TranscodingContainer=pcm"
+          "&AudioCodec=pcm_s16le"
+          "&audioBitRate=16000&api_key=%s"
+          " HTTP/1.1\r\n"
+          "Host: " FEILONG_JELLYFIN_SERVER_ADDR
+          ":" STR(FEILONG_JELLYFIN_SERVER_PORT) "\r\n"
+                                                "Accept: */*\r\n"
+                                                "Cache-Control: no-cache\r\n"
+                                                "DNT: 1\r\n"
+                                                "Pragma: no-cache\r\n"
+                                                "Range: bytes=0-\r\n"
+                                                "User-Agent:"
+                                                " " FEILONG_JELLYFIN_USER_AGENT
+                                                "\r\n\r\n",
+          music, JellyfinData.apikey);
+}
+
+static int play_music(char *music) {
+  printf("play music: %s\n", music);
+
+  // static struct netconn *conn;
+  // static char *host_ip = NULL;
+  static struct netbuf *buffer;
+  u16_t buflen;
+  // static ip_addr_t remote_ip;
+  volatile err_t res;
+
+  gen_music_req(req, music);
+  printf("music req: %s", req);
+  if (netconn_write(conn, req, strlen(req), NETCONN_COPY) != ERR_OK) {
+    printf("music: netconn_write failed %d!\r\n", res);
+    return res;
+  }
+  printf("netconn_write!\r\n");
+
+  do {
+    res = netconn_recv(conn, &buffer);
+    if (res != ERR_OK)
+      break;
+
+    char *buf;
+
+    netbuf_data(buffer, (void **)&buf, &buflen);
+    if (buflen > 0) {
+      play_done = 0;
+      dma_i2s_tx_start(buf, buflen);
+    }
+
+    while(!play_done)
+      ;
+
+    if (buffer != NULL) {
+      netbuf_delete(buffer);
+    }
+  } while (buflen == 1360);
+}
+
 void https_jellyfin_task(void *arg) {
   memset(&JellyfinData, 0, sizeof(JellyfinData));
-
-  while (1)
-    vTaskDelay(5000); // wait forever
 
   http_get(JELLYFIN_REQ_QuickConnect_Initiate);
   while (!JellyfinData.auth) {
@@ -390,7 +462,7 @@ void https_jellyfin_task(void *arg) {
   }
 
   // playmusic
-  printf("play music: %s/%s\n", HTTP_JELLYFIN_Lib, HTTP_JELLYFIN_MUSIC);
+  play_music(HTTP_JELLYFIN_MUSIC);
 
   while (1)
     vTaskDelay(20000); // wait forever

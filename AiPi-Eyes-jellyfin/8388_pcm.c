@@ -31,10 +31,7 @@ static ES8388_Cfg_Type ES8388Cfg = {
 
 void dma_i2s_tx_start(char *buf, uint32_t size);
 
-void dma0_ch0_isr(void *arg) {
-  printf("dma0_ch0_isr\r\n");
-  bflb_dma_channel_stop(dma0_ch0);
-}
+void dma0_ch0_isr(void *arg);
 
 void i2s_gpio_init()
 {

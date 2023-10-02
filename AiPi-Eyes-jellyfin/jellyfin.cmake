@@ -3,7 +3,7 @@ if(FEILONG_JELLYFIN_SERVER_USE_DNS)
 sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_USE_DNS)
 sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_ADDR="feilong-fipi.lan")
 else()
-sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_ADDR="192.168.10.110")
+sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_ADDR="192.168.10.109")
 endif()
 sdk_add_compile_definitions(-DFEILONG_JELLYFIN_SERVER_PORT=8096)
 

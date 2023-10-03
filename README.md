@@ -47,16 +47,9 @@
   - 和espressif有差距，比如音频解码器
   - 目前貌似只能配合freeRTOS使用，baremetal的话由于隐藏寄存器，出现问题难以查找
 
-## 图
+## 演示视频
 
-### 开机
+https://www.bilibili.com/video/BV1j94y1h7kn
 
-### 登录码
-
-### Lib
-
-### 列表
-
-### 演示视频
 
 正在做...
